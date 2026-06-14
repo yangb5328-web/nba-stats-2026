@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA 2025-26 赛季 · 场均数据排行榜</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: rgba(22, 27, 34, 0.85);
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --gold: #f0c060;
+  --silver: #b0b8c4;
+  --bronze: #d4946a;
+  --accent-pts: #f0a500;
+  --accent-reb: #4dabf7;
+  --accent-ast: #38d9a9;
+  --accent-stl: #9775fa;
+  --accent-blk: #ff6b6b;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Layout ===== */
+.page-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ===== Header ===== */
+.header {
+  text-align: center;
+  padding: 48px 0 0;
+}
+
+.header-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header .subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+.header .divider {
+  width: 60px;
+  height: 3px;
+  margin: 20px auto 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-pts), var(--accent-reb), var(--accent-ast), var(--accent-stl), var(--accent-blk));
+}
+
+/* ===== Tab Navigation ===== */
+.tab-nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin: 36px 0 32px;
+  background: var(--bg-secondary);
+  border-radius: 14px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.04);
+}
+
+.tab-btn.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tab-btn .tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tab-dot.pts { background: var(--accent-pts); }
+.tab-dot.reb { background: var(--accent-reb); }
+.tab-dot.ast { background: var(--accent-ast); }
+.tab-dot.stl { background: var(--accent-stl); }
+.tab-dot.blk { background: var(--accent-blk); }
+
+/* ===== Category Section ===== */
+.category {
+  display: none;
+  animation: fadeSlideIn 0.4s ease;
+}
+
+.category.active {
+  display: block;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.category-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.category-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.category-header .count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ===== Player Card Grid ===== */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+/* ===== Player Card ===== */
+.player-card {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 18px 12px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.player-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* 排名勋章 */
+.rank-badge {
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0d1117;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+
+.rank-1 { background: linear-gradient(135deg, #f7d774, #e2a83b); }
+.rank-2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+.rank-3 { background: linear-gradient(135deg, #e4a87a, #c0703c); }
+.rank-other { background: #30363d; color: var(--text-secondary); }
+
+/* 卡片勋章金/银/铜边框 */
+.player-card.medal-gold   { border-color: rgba(240,192,96,0.5); }
+.player-card.medal-silver { border-color: rgba(176,184,196,0.4); }
+.player-card.medal-bronze { border-color: rgba(212,148,106,0.4); }
+
+/* 头像 */
+.player-headshot {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #21262d;
+  margin: 0 auto 10px;
+  display: block;
+  border: 2px solid rgba(255,255,255,0.1);
+  transition: border-color 0.3s;
+}
+
+.player-card:hover .player-headshot {
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* 头像加载失败时显示占位 */
+.headshot-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1f2937, #374151);
+  border: 2px solid rgba(255,255,255,0.1);
+  font-size: 28px;
+  color: var(--text-secondary);
+}
+
+.player-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-team {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.player-stat {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.player-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* category accent color on stat */
+.pts-accent .player-stat { color: var(--accent-pts); }
+.reb-accent .player-stat { color: var(--accent-reb); }
+.ast-accent .player-stat { color: var(--accent-ast); }
+.stl-accent .player-stat { color: var(--accent-stl); }
+.blk-accent .player-stat { color: var(--accent-blk); }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  background: #161b22;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.015);
+}
+
+.modal-headshot {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+
+.modal-headshot-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1f2937, #374151);
+  border: 3px solid rgba(255,255,255,0.15);
+  font-size: 32px;
+}
+
+.modal-player-info h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.modal-player-info .modal-team {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.modal-close {
+  margin-left: auto;
+  align-self: flex-start;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px 28px 28px;
+}
+
+/* Stat table inside modal */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 14px 8px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.stat-item .val {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.stat-item .lbl {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.val.pts-c { color: var(--accent-pts); }
+.val.reb-c { color: var(--accent-reb); }
+.val.ast-c { color: var(--accent-ast); }
+.val.stl-c { color: var(--accent-stl); }
+.val.blk-c { color: var(--accent-blk); }
+.val.pct  { color: #e6edf3; }
+
+/* ===== Footer ===== */
+.footer {
+  text-align: center;
+  padding: 40px 0 32px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.footer a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  .player-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 800px) {
+  .player-grid { grid-template-columns: repeat(3, 1fr); }
+  .tab-btn { padding: 8px 14px; font-size: 0.82rem; }
+  .header h1 { font-size: 1.5rem; }
+  .player-stat { font-size: 1.6rem; }
+}
+
+@media (max-width: 540px) {
+  .player-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .tab-btn { padding: 7px 10px; font-size: 0.76rem; gap: 4px; }
+  .player-card { padding: 14px 8px 10px; }
+  .player-headshot { width: 56px; height: 56px; }
+  .player-stat { font-size: 1.4rem; }
+  .modal { width: 95%; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .modal-body { padding: 16px; }
+  .modal-header { padding: 20px 16px 16px; gap: 12px; }
+  .modal-headshot { width: 60px; height: 60px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+<!-- Header -->
+<header class="header">
+  <div class="header-icon">🏀</div>
+  <h1>NBA 2025-26 赛季 · 场均数据排行榜</h1>
+  <p class="subtitle">PER GAME STATISTICAL LEADERS — REGULAR SEASON</p>
+  <div class="divider"></div>
+</header>
+
+<!-- Tab Navigation -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-cat="pts">
+    <span class="tab-dot pts"></span> 得分
+  </button>
+  <button class="tab-btn" data-cat="reb">
+    <span class="tab-dot reb"></span> 篮板
+  </button>
+  <button class="tab-btn" data-cat="ast">
+    <span class="tab-dot ast"></span> 助攻
+  </button>
+  <button class="tab-btn" data-cat="stl">
+    <span class="tab-dot stl"></span> 抢断
+  </button>
+  <button class="tab-btn" data-cat="blk">
+    <span class="tab-dot blk"></span> 盖帽
+  </button>
+</nav>
+
+<!-- Main Content -->
+<main id="mainContent">
+  <!-- Sections generated by JS -->
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>数据来源：<a href="https://www.nba.com/stats" target="_blank">NBA.com</a> · <a href="https://www.espn.com/nba/stats" target="_blank">ESPN</a> · <a href="https://www.basketball-reference.com" target="_blank">Basketball-Reference</a></p>
+  <p style="margin-top:4px;">NBA 2025-26 Regular Season · 球员需出赛 ≥58 场方可进入场均排行榜</p>
+</footer>
+
+</div>
+
+<!-- Player Detail Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <img class="modal-headshot" id="modalHeadshot" src="" alt="" onerror="this.style.display='none';document.getElementById('modalHeadshotPlaceholder').style.display='flex';">
+      <div class="modal-headshot-placeholder" id="modalHeadshotPlaceholder" style="display:none;">🏀</div>
+      <div class="modal-player-info">
+        <h3 id="modalName"></h3>
+        <p class="modal-team" id="modalTeam"></p>
+      </div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="stat-grid" id="modalStats"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================================================================
+// PLAYER DATABASE — 2025-26 Season
+// ======================================================================
+const playerDB = {
+  // ID keyed by NBA.com player ID
+  "1629029": {
+    id: "1629029", name: "Luka Dončić",       team: "LAL", pos: "G",
+    ppg: 33.5, rpg: 8.3, apg: 7.7, spg: 1.6, bpg: 0.5,
+    fgPct: 48.7, threePct: 38.2, ftPct: 78.6, mpg: 36.8
+  },
+  "1628983": {
+    id: "1628983", name: "Shai Gilgeous-Alexander", team: "OKC", pos: "G",
+    ppg: 31.1, rpg: 5.9, apg: 6.6, spg: 1.9, bpg: 0.9,
+    fgPct: 52.3, threePct: 36.8, ftPct: 87.5, mpg: 34.6
+  },
+  "1630162": {
+    id: "1630162", name: "Anthony Edwards",    team: "MIN", pos: "G",
+    ppg: 28.8, rpg: 5.4, apg: 5.2, spg: 1.4, bpg: 0.7,
+    fgPct: 45.9, threePct: 37.1, ftPct: 82.3, mpg: 36.1
+  },
+  "1627759": {
+    id: "1627759", name: "Jaylen Brown",        team: "BOS", pos: "F",
+    ppg: 28.7, rpg: 6.4, apg: 3.8, spg: 1.1, bpg: 0.5,
+    fgPct: 48.1, threePct: 35.4, ftPct: 74.2, mpg: 35.4
+  },
+  "1630178": {
+    id: "1630178", name: "Tyrese Maxey",        team: "PHI", pos: "G",
+    ppg: 28.3, rpg: 4.2, apg: 6.6, spg: 1.9, bpg: 0.4,
+    fgPct: 44.6, threePct: 36.5, ftPct: 86.8, mpg: 37.9
+  },
+  "1628378": {
+    id: "1628378", name: "Donovan Mitchell",    team: "CLE", pos: "G",
+    ppg: 27.9, rpg: 4.9, apg: 5.1, spg: 1.3, bpg: 0.4,
+    fgPct: 46.2, threePct: 38.0, ftPct: 85.1, mpg: 34.2
+  },
+  "202695": {
+    id: "202695", name: "Kawhi Leonard",        team: "LAC", pos: "F",
+    ppg: 27.9, rpg: 6.6, apg: 4.1, spg: 1.9, bpg: 0.7,
+    fgPct: 51.0, threePct: 39.9, ftPct: 88.4, mpg: 34.3
+  },
+  "203999": {
+    id: "203999", name: "Nikola Jokić",         team: "DEN", pos: "C",
+    ppg: 27.7, rpg: 12.9, apg: 10.7, spg: 1.4, bpg: 0.8,
+    fgPct: 58.4, threePct: 35.5, ftPct: 82.0, mpg: 35.8
+  },
+  "203507": {
+    id: "203507", name: "Giannis Antetokounmpo", team: "MIL", pos: "F",
+    ppg: 27.6, rpg: 9.8, apg: 5.4, spg: 1.1, bpg: 1.3,
+    fgPct: 59.2, threePct: 24.4, ftPct: 65.7, mpg: 33.9
+  },
+  "201142": {
+    id: "201142", name: "Kevin Durant",         team: "HOU", pos: "F",
+    ppg: 27.0, rpg: 6.3, apg: 4.7, spg: 0.8, bpg: 1.2,
+    fgPct: 53.1, threePct: 40.6, ftPct: 88.9, mpg: 36.0
+  },
+
+  // RPG leaders extras
+  "203954": {
+    id: "203954", name: "Joel Embiid",          team: "PHI", pos: "C",
+    ppg: 27.1, rpg: 9.4, apg: 4.1, spg: 0.9, bpg: 1.6,
+    fgPct: 53.8, threePct: 34.8, ftPct: 86.5, mpg: 32.8
+  },
+  "1630567": {
+    id: "1630567", name: "Scottie Barnes",      team: "TOR", pos: "F",
+    ppg: 19.5, rpg: 8.2, apg: 6.5, spg: 1.2, bpg: 1.1,
+    fgPct: 47.3, threePct: 33.1, ftPct: 76.7, mpg: 34.6
+  },
+  "203076": {
+    id: "203076", name: "Anthony Davis",        team: "DAL", pos: "C",
+    ppg: 22.4, rpg: 10.1, apg: 3.3, spg: 1.1, bpg: 1.8,
+    fgPct: 54.2, threePct: 27.5, ftPct: 79.3, mpg: 33.5
+  },
+  "1630596": {
+    id: "1630596", name: "Evan Mobley",         team: "CLE", pos: "C",
+    ppg: 18.7, rpg: 9.6, apg: 3.5, spg: 0.9, bpg: 1.7,
+    fgPct: 55.6, threePct: 33.8, ftPct: 73.0, mpg: 32.4
+  },
+  "1630552": {
+    id: "1630552", name: "Jalen Johnson",       team: "ATL", pos: "F",
+    ppg: 19.7, rpg: 10.3, apg: 7.9, spg: 1.3, bpg: 1.1,
+    fgPct: 49.4, threePct: 34.4, ftPct: 74.8, mpg: 35.8
+  },
+  "1641705": {
+    id: "1641705", name: "Victor Wembanyama",   team: "SAS", pos: "C",
+    ppg: 23.6, rpg: 11.5, apg: 3.8, spg: 1.2, bpg: 3.1,
+    fgPct: 48.6, threePct: 33.4, ftPct: 80.2, mpg: 32.1
+  },
+  "1627734": {
+    id: "1627734", name: "Domantas Sabonis",    team: "SAC", pos: "C",
+    ppg: 18.8, rpg: 10.5, apg: 6.8, spg: 0.8, bpg: 0.5,
+    fgPct: 58.1, threePct: 34.0, ftPct: 75.2, mpg: 34.8
+  },
+  "1629636": {
+    id: "1629636", name: "Darius Garland",      team: "CLE", pos: "G",
+    ppg: 22.2, rpg: 3.1, apg: 8.0, spg: 1.2, bpg: 0.2,
+    fgPct: 47.5, threePct: 39.8, ftPct: 86.9, mpg: 33.7
+  },
+  "1629027": {
+    id: "1629027", name: "Trae Young",          team: "ATL", pos: "G",
+    ppg: 24.5, rpg: 3.3, apg: 9.2, spg: 1.3, bpg: 0.2,
+    fgPct: 43.3, threePct: 36.8, ftPct: 88.2, mpg: 35.9
+  },
+  "1630169": {
+    id: "1630169", name: "Tyrese Haliburton",   team: "IND", pos: "G",
+    ppg: 19.9, rpg: 4.0, apg: 9.0, spg: 1.1, bpg: 0.6,
+    fgPct: 47.0, threePct: 38.5, ftPct: 84.6, mpg: 33.4
+  },
+  "201935": {
+    id: "201935", name: "James Harden",         team: "LAC", pos: "G",
+    ppg: 21.8, rpg: 5.4, apg: 8.4, spg: 1.4, bpg: 0.6,
+    fgPct: 42.4, threePct: 36.1, ftPct: 87.2, mpg: 34.8
+  },
+  "2544": {
+    id: "2544",   name: "LeBron James",         team: "LAL", pos: "F",
+    ppg: 24.3, rpg: 7.0, apg: 7.8, spg: 1.0, bpg: 0.6,
+    fgPct: 52.5, threePct: 38.0, ftPct: 75.5, mpg: 34.0
+  },
+  "1626157": {
+    id: "1626157", name: "Karl-Anthony Towns",  team: "NYK", pos: "C",
+    ppg: 23.9, rpg: 11.9, apg: 3.4, spg: 0.8, bpg: 0.9,
+    fgPct: 52.8, threePct: 40.8, ftPct: 84.3, mpg: 33.8
+  },
+  "1631117": {
+    id: "1631117", name: "Walker Kessler",      team: "UTA", pos: "C",
+    ppg: 11.4, rpg: 10.8, apg: 2.1, spg: 0.5, bpg: 2.3,
+    fgPct: 67.2, threePct: 0, ftPct: 55.6, mpg: 29.7
+  },
+  "1631105": {
+    id: "1631105", name: "Jalen Duren",         team: "DET", pos: "C",
+    ppg: 13.2, rpg: 10.9, apg: 2.6, spg: 0.6, bpg: 1.0,
+    fgPct: 65.8, threePct: 0, ftPct: 66.4, mpg: 28.1
+  },
+  "203497": {
+    id: "203497", name: "Rudy Gobert",          team: "MIN", pos: "C",
+    ppg: 13.3, rpg: 11.5, apg: 1.8, spg: 0.7, bpg: 1.7,
+    fgPct: 66.4, threePct: 0, ftPct: 66.8, mpg: 32.3
+  },
+  "1642270": {
+    id: "1642270", name: "Donovan Clingan",     team: "POR", pos: "C",
+    ppg: 10.6, rpg: 11.6, apg: 1.5, spg: 0.5, bpg: 1.9,
+    fgPct: 58.8, threePct: 20.0, ftPct: 62.4, mpg: 27.4
+  },
+  "1641709": {
+    id: "1641709", name: "Ausar Thompson",      team: "DET", pos: "F",
+    ppg: 12.1, rpg: 6.8, apg: 2.7, spg: 2.0, bpg: 0.8,
+    fgPct: 48.4, threePct: 28.5, ftPct: 65.2, mpg: 28.9
+  },
+  "1630700": {
+    id: "1630700", name: "Dyson Daniels",       team: "ATL", pos: "G",
+    ppg: 12.6, rpg: 5.5, apg: 3.4, spg: 2.0, bpg: 0.4,
+    fgPct: 46.7, threePct: 33.8, ftPct: 68.0, mpg: 30.7
+  },
+  "1631096": {
+    id: "1631096", name: "Chet Holmgren",       team: "OKC", pos: "C",
+    ppg: 17.3, rpg: 8.7, apg: 2.5, spg: 0.7, bpg: 2.2,
+    fgPct: 54.0, threePct: 37.2, ftPct: 79.5, mpg: 30.1
+  },
+  "1630529": {
+    id: "1630529", name: "Herb Jones",          team: "NOP", pos: "F",
+    ppg: 11.8, rpg: 4.2, apg: 2.9, spg: 1.5, bpg: 0.9,
+    fgPct: 49.2, threePct: 38.6, ftPct: 78.0, mpg: 31.6
+  },
+  "1641717": {
+    id: "1641717", name: "Cason Wallace",       team: "OKC", pos: "G",
+    ppg: 13.0, rpg: 3.8, apg: 3.4, spg: 1.9, bpg: 0.5,
+    fgPct: 47.3, threePct: 37.5, ftPct: 79.4, mpg: 29.2
+  },
+  "1630595": {
+    id: "1630595", name: "Cade Cunningham",     team: "DET", pos: "G",
+    ppg: 25.4, rpg: 6.3, apg: 9.9, spg: 1.3, bpg: 0.6,
+    fgPct: 45.8, threePct: 35.2, ftPct: 84.1, mpg: 35.6
+  },
+  "1641708": {
+    id: "1641708", name: "Amen Thompson",       team: "HOU", pos: "F",
+    ppg: 15.2, rpg: 8.1, apg: 4.9, spg: 1.5, bpg: 0.9,
+    fgPct: 55.0, threePct: 24.1, ftPct: 67.5, mpg: 31.8
+  },
+  "1626164": {
+    id: "1626164", name: "Devin Booker",        team: "PHX", pos: "G",
+    ppg: 26.8, rpg: 4.4, apg: 6.7, spg: 1.0, bpg: 0.4,
+    fgPct: 47.9, threePct: 37.5, ftPct: 88.0, mpg: 36.4
+  },
+  "1628369": {
+    id: "1628369", name: "Jayson Tatum",        team: "BOS", pos: "F",
+    ppg: 26.3, rpg: 8.1, apg: 5.4, spg: 1.1, bpg: 0.7,
+    fgPct: 46.7, threePct: 36.9, ftPct: 83.5, mpg: 35.9
+  },
+  "201939": {
+    id: "201939", name: "Stephen Curry",        team: "GSW", pos: "G",
+    ppg: 25.0, rpg: 4.5, apg: 5.8, spg: 1.0, bpg: 0.3,
+    fgPct: 45.9, threePct: 41.2, ftPct: 92.3, mpg: 32.7
+  },
+  "1628381": {
+    id: "1628381", name: "Bam Adebayo",         team: "MIA", pos: "C",
+    ppg: 19.6, rpg: 10.0, apg: 4.1, spg: 1.2, bpg: 0.9,
+    fgPct: 52.6, threePct: 28.7, ftPct: 76.3, mpg: 33.4
+  },
+  "1626167": {
+    id: "1626167", name: "Myles Turner",        team: "IND", pos: "C",
+    ppg: 16.8, rpg: 7.8, apg: 1.6, spg: 0.6, bpg: 2.1,
+    fgPct: 49.4, threePct: 36.0, ftPct: 78.1, mpg: 29.5
+  },
+  "1631094": {
+    id: "1631094", name: "Paolo Banchero",      team: "ORL", pos: "F",
+    ppg: 23.3, rpg: 7.6, apg: 5.0, spg: 0.9, bpg: 0.6,
+    fgPct: 45.6, threePct: 33.2, ftPct: 74.7, mpg: 35.0
+  },
+  "1629028": {
+    id: "1629028", name: "Deandre Ayton",       team: "POR", pos: "C",
+    ppg: 16.4, rpg: 11.6, apg: 2.0, spg: 0.7, bpg: 0.9,
+    fgPct: 57.9, threePct: 22.2, ftPct: 72.5, mpg: 30.8
+  },
+  "1630577": {
+    id: "1630577", name: "Alperen Sengün",      team: "HOU", pos: "C",
+    ppg: 20.1, rpg: 9.4, apg: 6.1, spg: 1.1, bpg: 0.7,
+    fgPct: 53.7, threePct: 28.9, ftPct: 71.2, mpg: 32.3
+  },
+  "1628991": {
+    id: "1628991", name: "Jaren Jackson Jr.",   team: "MEM", pos: "C",
+    ppg: 22.7, rpg: 7.3, apg: 2.5, spg: 1.1, bpg: 1.8,
+    fgPct: 48.5, threePct: 36.2, ftPct: 79.3, mpg: 31.4
+  },
+  "1641726": {
+    id: "1641726", name: "Dereck Lively II",    team: "DAL", pos: "C",
+    ppg: 11.0, rpg: 9.2, apg: 2.1, spg: 0.6, bpg: 1.6,
+    fgPct: 68.5, threePct: 0, ftPct: 61.8, mpg: 26.5
+  },
+  "1641744": {
+    id: "1641744", name: "Zach Edey",           team: "MEM", pos: "C",
+    ppg: 13.5, rpg: 9.5, apg: 1.4, spg: 0.5, bpg: 1.9,
+    fgPct: 62.1, threePct: 25.0, ftPct: 68.0, mpg: 25.6
+  }
+};
+
+// ======================================================================
+// RANKINGS — Top 10 per category (player IDs in order)
+// ======================================================================
+const rankings = {
+  pts: ["1629029","1628983","1630162","1627759","1630178","1628378","202695","203999","203507","201142"],
+  reb: ["203999","1626157","1642270","1629028","1641705","203497","1631105","1631117","1627734","203076"],
+  ast: ["203999","1630595","1629027","1630169","1629029","201935","2544","1629636","1630552","1628378"],
+  stl: ["1641709","1630700","1628983","1630178","202695","1641717","1629029","203999","1641708","1630529"],
+  blk: ["1641705","1631117","1631096","203497","1631105","1641744","1628991","203076","1642270","1630596"]
+};
+
+const categoryMeta = {
+  pts: { label: "得分",    unit: "PPG",  icon: "🔥", accentClass: "pts-accent", colorVar: "var(--accent-pts)" },
+  reb: { label: "篮板",    unit: "RPG",  icon: "🛡️", accentClass: "reb-accent", colorVar: "var(--accent-reb)" },
+  ast: { label: "助攻",    unit: "APG",  icon: "🎯", accentClass: "ast-accent", colorVar: "var(--accent-ast)" },
+  stl: { label: "抢断",    unit: "SPG",  icon: "⚡", accentClass: "stl-accent", colorVar: "var(--accent-stl)" },
+  blk: { label: "盖帽",    unit: "BPG",  icon: "🖐️", accentClass: "blk-accent", colorVar: "var(--accent-blk)" }
+};
+
+const catKeys = ['pts','reb','ast','stl','blk'];
+const catToProp = { pts: 'ppg', reb: 'rpg', ast: 'apg', stl: 'spg', blk: 'bpg' };
+
+// ======================================================================
+// Render Functions
+// ======================================================================
+function getHeadshotURL(playerId) {
+  return `https://cdn.nba.com/headshots/nba/latest/260x190/${playerId}.png`;
+}
+
+function getMedalClass(rank) {
+  if (rank === 0) return 'medal-gold';
+  if (rank === 1) return 'medal-silver';
+  if (rank === 2) return 'medal-bronze';
+  return '';
+}
+
+function getRankBadgeClass(rank) {
+  if (rank === 0) return 'rank-1';
+  if (rank === 1) return 'rank-2';
+  if (rank === 2) return 'rank-3';
+  return 'rank-other';
+}
+
+function createPlayerCard(playerId, rank, catKey) {
+  const p = playerDB[playerId];
+  if (!p) return '';
+
+  const meta = categoryMeta[catKey];
+  const statVal = p[catToProp[catKey]];
+  const medalClass = getMedalClass(rank);
+  const badgeClass = getRankBadgeClass(rank);
+  const rankDisplay = rank + 1;
+
+  return `
+    <div class="player-card ${medalClass} ${meta.accentClass}"
+         onclick="openPlayerModal('${playerId}')"
+         title="点击查看 ${p.name} 完整数据">
+      <div class="rank-badge ${badgeClass}">${rankDisplay}</div>
+      <img class="player-headshot"
+           src="${getHeadshotURL(playerId)}"
+           alt="${p.name}"
+           loading="lazy"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="headshot-placeholder" style="display:none;">🏀</div>
+      <div class="player-name">${p.name}</div>
+      <div class="player-team">${p.team}</div>
+      <div class="player-stat">${statVal.toFixed(1)}</div>
+      <div class="player-stat-label">${meta.unit}</div>
+    </div>
+  `;
+}
+
+function renderCategory(catKey) {
+  const meta = categoryMeta[catKey];
+  const playerIds = rankings[catKey];
+  let html = '';
+
+  html += `<section class="category active" id="cat-${catKey}">`;
+  html += `<div class="category-header">`;
+  html += `<h2>${meta.icon} ${meta.label}排行榜 · TOP 10</h2>`;
+  html += `<span class="count">场均${meta.label} | 至少出赛58场</span>`;
+  html += `</div>`;
+  html += `<div class="player-grid">`;
+
+  playerIds.forEach((pid, idx) => {
+    html += createPlayerCard(pid, idx, catKey);
+  });
+
+  html += `</div></section>`;
+  return html;
+}
+
+function renderAllCategories() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = catKeys.map(k => renderCategory(k)).join('');
+  // Show only first category initially
+  switchCategory('pts');
+}
+
+// ======================================================================
+// Tab Switching
+// ======================================================================
+function switchCategory(catKey) {
+  // Update tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === catKey);
+  });
+  // Show/hide sections
+  document.querySelectorAll('.category').forEach(sec => {
+    sec.classList.toggle('active', sec.id === `cat-${catKey}`);
+  });
+}
+
+document.getElementById('tabNav').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  switchCategory(btn.dataset.cat);
+});
+
+// ======================================================================
+// Modal — Player Detail
+// ======================================================================
+function openPlayerModal(playerId) {
+  const p = playerDB[playerId];
+  if (!p) return;
+
+  document.getElementById('modalHeadshot').src = getHeadshotURL(playerId);
+  document.getElementById('modalHeadshot').style.display = 'block';
+  document.getElementById('modalHeadshotPlaceholder').style.display = 'none';
+  document.getElementById('modalName').textContent = p.name;
+  document.getElementById('modalTeam').textContent = `${p.team} · ${p.pos}`;
+
+  const statsHTML = `
+    <div class="stat-item"><div class="val pts-c">${p.ppg.toFixed(1)}</div><div class="lbl">得分 PPG</div></div>
+    <div class="stat-item"><div class="val reb-c">${p.rpg.toFixed(1)}</div><div class="lbl">篮板 RPG</div></div>
+    <div class="stat-item"><div class="val ast-c">${p.apg.toFixed(1)}</div><div class="lbl">助攻 APG</div></div>
+    <div class="stat-item"><div class="val stl-c">${p.spg.toFixed(1)}</div><div class="lbl">抢断 SPG</div></div>
+    <div class="stat-item"><div class="val blk-c">${p.bpg.toFixed(1)}</div><div class="lbl">盖帽 BPG</div></div>
+    <div class="stat-item"><div class="val pct">${p.mpg.toFixed(1)}</div><div class="lbl">分钟 MPG</div></div>
+    <div class="stat-item"><div class="val pct">${p.fgPct.toFixed(1)}%</div><div class="lbl">命中率 FG%</div></div>
+    <div class="stat-item"><div class="val pct">${p.threePct.toFixed(1)}%</div><div class="lbl">三分 3P%</div></div>
+    <div class="stat-item"><div class="val pct">${p.ftPct.toFixed(1)}%</div><div class="lbl">罚球 FT%</div></div>
+  `;
+
+  document.getElementById('modalStats').innerHTML = statsHTML;
+  document.getElementById('modalOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modalOverlay')) {
+    closeModal();
+  }
+});
+
+// Keyboard: ESC to close
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ======================================================================
+// Init
+// ======================================================================
+renderAllCategories();
+</script>
+
+</body>
+</html>
